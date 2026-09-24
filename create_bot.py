@@ -1,4 +1,4 @@
-import asyncio
+   code = """import asyncio
 import os
 import io
 import tempfile
@@ -22,7 +22,7 @@ class CollectingPhotos(StatesGroup):
 user_photos = {}
 WATERMARK_TEXT = "@greedeeworld"
 
-def create_collage(images, max_size=800):
+def create_collage(images: list, max_size=800) -> bytes:
     n = len(images)
     if n == 2: cols, rows = 2, 1
     elif n <= 4: cols, rows = 2, 2
@@ -33,13 +33,13 @@ def create_collage(images, max_size=800):
         img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
         w, h = img.size
         side = min(w, h)
-        img = img.crop(((w-side)//2, (h-side)//2, (w+side)//2, (h+side)//2))
+        img = img.crop(((w - side) // 2, (h - side) // 2, (w + side) // 2, (h + side) // 2))
         img = img.resize((cell_size, cell_size), Image.LANCZOS)
         canvas.paste(img, ((i % cols) * cell_size, (i // cols) * cell_size))
     draw = ImageDraw.Draw(canvas)
     try: font = ImageFont.truetype("arial.ttf", 24)
     except: font = ImageFont.load_default()
-    draw.text((20, canvas.height - 40), WATERMARK_TEXT, fill=(255,255,255), font=font)
+    draw.text((20, canvas.height - 40), WATERMARK_TEXT, fill=(255, 255, 255), font=font)
     buffer = io.BytesIO()
     canvas.save(buffer, format="JPEG", quality=90)
     buffer.seek(0)
@@ -49,8 +49,8 @@ def get_color_name(rgb):
     r, g, b = rgb
     brightness = (r + g + b) / 3
     if brightness < 50: return "черный", "⚫"
-    elif brightness > 200 and abs(r-g) < 30 and abs(g-b) < 30: return "белый", "⚪"
-    elif abs(r-g) < 30 and abs(g-b) < 30: return "серый", "🔘"
+    elif brightness > 200 and abs(r - g) < 30 and abs(g - b) < 30: return "белый", "⚪"
+    elif abs(r - g) < 30 and abs(g - b) < 30: return "серый", "🔘"
     elif r > 150 and g < 100 and b < 100: return "красный", "🔴"
     elif r > 200 and g > 100 and g < 150 and b < 100: return "оранжевый", "🟠"
     elif r > 200 and g > 200 and b < 100: return "желтый", "🟡"
@@ -62,10 +62,10 @@ def get_color_name(rgb):
     elif r > 200 and g > 180 and b > 150 and brightness > 180: return "бежевый", "🟫"
     else: return "цветной", "🎨"
 
-def analyze_colors(images):
+def analyze_colors(images: list) -> dict:
     all_colors = []
     for img_bytes in images:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp:
             tmp.write(img_bytes)
             tmp_path = tmp.name
         try:
@@ -78,11 +78,10 @@ def analyze_colors(images):
     names, emojis = [], []
     for rgb in all_colors:
         n, e = get_color_name(rgb)
-        names.append(n)
-        emojis.append(e)
+        names.append(n); emojis.append(e)
     return {"colors": names, "emojis": emojis}
 
-def generate_style_text(n_photos, color_data):
+def generate_style_text(n_photos: int, color_data: dict) -> str:
     colors = list(set(color_data["colors"]))
     palette = " ".join(color_data["emojis"])
     if len(colors) == 1: harmony = f"🎯 Монохром в оттенке «{colors[0]}» — сильное минималистичное решение."
@@ -91,18 +90,11 @@ def generate_style_text(n_photos, color_data):
         else: harmony = f"🔥 Отличная пара: {colors[0]} + {colors[1]}. Сбалансированный образ."
     elif len(colors) == 3: harmony = f"🎨 Тройка цветов ({', '.join(colors)}) — есть где развернуться с аксессуарами."
     else: harmony = f"🌈 Смелая палитра из {len(colors)} цветов. Главное — не перегрузи акцентами."
+    
     tip = "Две вещи работают, когда они контрастируют по фактуре." if n_photos == 2 else "Многослойный образ — следи, чтобы один элемент был акцентным." if n_photos >= 4 else "Классическая тройка — идеальный баланс."
-    return f"🖤 Собрал твой образ из {n_photos} вещей.
+    return f"🖤 Собрал твой образ из {n_photos} вещей.\\n\\n🎨 Палитра: {palette}\\nЦвета: {', '.join(colors)}\\n\\n{harmony}\\n{tip}\\n\\nХочешь усилить образ? Загляни в новые дропы Greedee World 👇"
 
-🎨 Палитра: {palette}
-Цвета: {', '.join(colors)}
-
-{harmony}
-{tip}
-
-Хочешь усилить образ? Загляни в новые дропы Greedee World 👇"
-
-def get_result_keyboard():
+def get_result_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔄 Собрать ещё", callback_data="restart")],
         [InlineKeyboardButton(text="🛍 В магазин Greedee World", url="https://greedee.ru")],
@@ -110,18 +102,14 @@ def get_result_keyboard():
     ])
 
 @dp.message(Command("start"))
-async def cmd_start(message, state):
+async def cmd_start(message: types.Message, state: FSMContext):
     await state.clear()
     user_photos.pop(message.from_user.id, None)
-    await message.answer("🖤 <b>Greedee World AI-стилист</b>
-
-Загрузи 2–6 фото своих вещей — я соберу из них гармоничный образ и проанализирую цвета.
-
-Просто кидай фото по одному, когда закончишь — нажми «Готово».", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="✅ Готово, собирай образ", callback_data="finish")]]))
+    await message.answer("🖤 <b>Greedee World AI-стилист</b>\\n\\nЗагрузи 2–6 фото своих вещей — я соберу из них гармоничный образ и проанализирую цвета.\\n\\nПросто кидай фото по одному, когда закончишь — нажми «Готово».", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="✅ Готово, собирай образ", callback_data="finish")]]))
     await state.set_state(CollectingPhotos.waiting_photos)
 
 @dp.message(CollectingPhotos.waiting_photos, F.photo)
-async def receive_photo(message, state):
+async def receive_photo(message: types.Message, state: FSMContext):
     uid = message.from_user.id
     user_photos.setdefault(uid, [])
     if len(user_photos[uid]) >= 6:
@@ -132,7 +120,7 @@ async def receive_photo(message, state):
     await message.answer(f"➕ Добавил ({len(user_photos[uid])}/6). Можешь ещё {6 - len(user_photos[uid])} или жми «Готово».")
 
 @dp.callback_query(CollectingPhotos.waiting_photos, F.data == "finish")
-async def finish_collection(callback, state):
+async def finish_collection(callback: types.CallbackQuery, state: FSMContext):
     photos = user_photos.get(callback.from_user.id, [])
     if len(photos) < 2:
         await callback.answer("Нужно минимум 2 вещи 😎", show_alert=True)
@@ -145,10 +133,16 @@ async def finish_collection(callback, state):
     await state.clear()
 
 @dp.callback_query(F.data == "restart")
-async def restart(callback, state):
+async def restart(callback: types.CallbackQuery, state: FSMContext):
     await cmd_start(callback.message, state)
     await callback.answer()
 
 if __name__ == "__main__":
     print("🖤 Greedee AI Stylist запущен...")
-    asyncio.run(dp.start_polling(bot))
+    asyncio.run(Dispatcher(storage=MemoryStorage()).start_polling(Bot(token=os.getenv("BOT_TOKEN"))))
+"""
+   with open("main.py", "w", encoding="utf-8") as f:
+       f.write(code)
+   print("✅ Файл main.py успешно создан как ТЕКСТОВЫЙ ФАЙЛ!")
+   
+
