@@ -1,0 +1,7 @@
+venv/
+.DS_Store
+.env
+*.pyc
+__pycache__/
+create_bot.py
+fix_main.py
