@@ -152,3 +152,4 @@ async def restart(callback, state):
 if __name__ == "__main__":
     print("🖤 Greedee AI Stylist запущен...")
     asyncio.run(dp.start_polling(bot))
+# Force rebuild Fri Sep 25 01:40:20 MSK 2026
